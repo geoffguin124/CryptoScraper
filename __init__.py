@@ -1,0 +1,1 @@
+# Creates CryptoScraper package, allowing imports from src folder.

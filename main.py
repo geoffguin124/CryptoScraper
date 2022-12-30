@@ -1,52 +1,71 @@
-# Main folder that runs the monitor and sends the webhooks
+# Main folder that runs the selected monitor
+# and sends the webhooks
 
-from user import *
+
 import time
 import requests
-from bs4 import BeautifulSoup as BS
-from dataclasses import dataclass
-
-
-@dataclass
-class Coin:
-    name: str
-    price: str
-
-
-def monitor():
-    url = 'https://crypto.com/price'
-    page = requests.get(url)
-    soup = BS(page.text, 'lxml')
-    table = soup.find('table', class_='chakra-table css-1qpk7f7')
-    new_lst = []
-    for coin in table.find_all('tr', class_='css-1cxc880'):
-        name = coin.find('span', class_='chakra-text css-1jj7b1a').text
-        price = coin.find('div', class_='css-b1ilzc').text
-        new_lst.append(Coin(name, price))
-    return new_lst
+from src import coin_no_input as cni
+from src import coin_input as ci
+import user as user
 
 
 def main():
-    get_coin_input()
-    while True:
-        webhook = 'https://discord.com/api/webhooks/1058247494699589693/CzgWQYevOdZ3dbLnu4Ik1jQqBBbdJ699NbBMEsMyje-t_Am9o8AyUn3U25IeAYo2S-_V'
-        lst = monitor()
-        sleep = {
-            'content': 'Sleeping 2 minutes...'
+    type_input = input("Enter 1 for all coins and 2 for selecting coins: ")
+    webhook = 'WEBHOOK_KEY'
+    if type_input == '1':
+        hook = {
+            'content': 'Starting Monitor...'
         }
-        requests.post(webhook, data=sleep)
-        time.sleep(120)
-        new_lst = monitor()
-        for coin in lst:
-            for coin1 in new_lst:
-                if coin1.name == coin.name:
-                    if coin1.price != coin.price:
-                        data = {
-                            'name': coin.name,
-                            'content': coin.name + " has changed from " + coin.price + " to " + coin1.price
-                        }
-                        requests.post(webhook, data=data)
-                        print("Webhook sent")
+        requests.post(webhook, data=hook)
+        while True:
+            lst = cni.monitor()
+            time.sleep(10)
+            new_lst = cni.monitor()
+            for coin in lst:
+                for coin1 in new_lst:
+                    if coin1.name == coin.name:
+                        if coin1.price != coin.price:
+                            data = {
+                                'name': coin.name,
+                                'content': coin.name + " has changed from " + coin.price + " to " + coin1.price + '.'
+                            }
+                            requests.post(webhook, data=data)
+                            print("Webhook sent")
+    if type_input == '2':
+        choices = user.get_coin_input()
+        string = 'You are monitoring for '
+        for choice in choices:
+            if choices.index(choice) == len(choices) - 1:
+                string = string + choice + '.'
+            else:
+                string = string + choice + ', '
+        hook2 = {
+            'content': string,
+        }
+        hook3 = {
+            'content': 'Starting Monitor...'
+        }
+        requests.post(webhook, data=hook2)
+        requests.post(webhook, data=hook3)
+        while True:
+            lst = ci.monitor(choices)
+            time.sleep(10)
+            new_lst = ci.monitor(choices)
+            for coin in lst:
+                for coin1 in new_lst:
+                    if coin1.name == coin.name:
+                        if coin1.price != coin.price:
+                            data = {
+                                'name': coin.name,
+                                'content': coin.name + " has changed from " + coin.price + " to " + coin1.price + '.'
+                            }
+                            requests.post(webhook, data=data)
+                            print("Webhook sent")
+    else:
+        hook4 = {
+            'content': 'Error: Invalid entry.'
+        }
+        requests.post(webhook, data=hook4)
 
 
 if __name__ == '__main__':
